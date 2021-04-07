@@ -2,7 +2,7 @@ from random import randint, randrange, random
 from math import exp
 import matplotlib.pyplot as plt
 
-N = 350
+N = 50
 J = -1
 H = 0
 Kb = 1
@@ -13,11 +13,11 @@ n_samples = 300
 S = [[randrange(-1, 2, 2) for i in range(N)] for j in range(N)]
 
 def runCycles(T, H = 0):
-    m_arr_loc = []
-    e_arr_loc = []
+    magnArr = []
+    energyArr = []
     for i in range(trigger + n_samples * sampleDelay):
-        m_loc = 0
-        e_loc = 0
+        magn = 0
+        energy = 0
         x = randint(0, N - 1)
         y = randint(0, N - 1)
         deltaE = -2 * J * S[x][y] * (S[(x + 1) % N][(y + 1) % N] +
@@ -31,22 +31,22 @@ def runCycles(T, H = 0):
         if i % sampleDelay == 0 and i > trigger:
             for j in S:
                 for el in j:
-                    m_loc += el
-            m_arr_loc.append(m_loc / N**2)
+                    magn += el
+            magnArr.append(magn / N**2)
 
             for a in range(N):
                 for b in range(N):
-                    e_loc += J * S[a][b] * (S[(a + 1) % N][b] + S[a][(b + 1) % N]) - 2 * H * S[a][b]
-            e_arr_loc.append(e_loc)
+                    energy += J * S[a][b] * (S[(a + 1) % N][b] + S[a][(b + 1) % N]) - 2 * H * S[a][b]
+            energyArr.append(energy)
 
     susc = 0
     sq_av = 0
     av_sq = 0
     magn = 0
 
-    for m in m_arr_loc:
-        sq_av += m / len(m_arr_loc)
-        av_sq += m**2 / len(m_arr_loc)
+    for m in magnArr:
+        sq_av += m / len(magnArr)
+        av_sq += m**2 / len(magnArr)
 
     magn = abs(sq_av)
 
@@ -56,9 +56,9 @@ def runCycles(T, H = 0):
     cal = 0
     sq_av = 0
     av_sq = 0
-    for e in e_arr_loc:
-        sq_av += e / len(m_arr_loc)
-        av_sq += e**2 / len(m_arr_loc)
+    for e in energyArr:
+        sq_av += e / len(magnArr)
+        av_sq += e**2 / len(magnArr)
 
     sq_av = sq_av ** 2
     cal = (av_sq - sq_av) / T
@@ -78,17 +78,17 @@ for i in range(len(res_arr)):
     heat.append(res_arr[i][2])
     arr_magn.append(res_arr[i][3])
 
-plt.xlabel("Temperature")
-plt.ylabel("Susceptibility")
-plt.plot(temp, susc)
-#plt.show()
+# plt.xlabel("Temperature")
+# plt.ylabel("Susceptibility")
+# plt.plot(temp, susc)
+# plt.show()
 
-plt.ylabel("Specific heat")
-plt.xlabel("Temperature")
-plt.plot(temp, heat)
-#plt.show()
+# plt.ylabel("Specific heat")
+# plt.xlabel("Temperature")
+# plt.plot(temp, heat)
+# plt.show()
 
-plt.ylabel("Magnetization")
-plt.xlabel("Temperature")
-plt.plot(temp, arr_magn)
-#plt.show()
+# plt.ylabel("Magnetization")
+# plt.xlabel("Temperature")
+# plt.plot(temp, arr_magn)
+# plt.show()
