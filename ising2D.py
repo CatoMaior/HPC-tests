@@ -20,10 +20,10 @@ def runCycles(T, H = 0):
         energy = 0
         x = randint(0, N - 1)
         y = randint(0, N - 1)
-        deltaE = -2 * J * S[x][y] * (S[(x + 1) % N][(y + 1) % N] +
-                                  S[(x + 1) % N][(y - 1) % N] +
-                                  S[(x - 1) % N][(y + 1) % N] +
-                                  S[(x - 1) % N][(y - 1) % N]) - 2 * H * S[x][y]
+        deltaE = -2 * J * S[x][y] * (S[x % N][(y + 1) % N] +
+                                  S[x % N][(y - 1) % N] +
+                                  S[(x - 1) % N][y % N] +
+                                  S[(x + 1) % N][y % N]) - 2 * H * S[x][y]
 
         if deltaE < 0 or random() < exp(-deltaE/(Kb * T)):
             S[x][y] *= -1
@@ -78,17 +78,17 @@ for i in range(len(res_arr)):
     heat.append(res_arr[i][2])
     arr_magn.append(res_arr[i][3])
 
-# plt.xlabel("Temperature")
-# plt.ylabel("Susceptibility")
-# plt.plot(temp, susc)
-# plt.show()
+plt.xlabel("Temperature")
+plt.ylabel("Susceptibility")
+plt.plot(temp, susc)
+plt.show()
 
-# plt.ylabel("Specific heat")
-# plt.xlabel("Temperature")
-# plt.plot(temp, heat)
-# plt.show()
+plt.ylabel("Specific heat")
+plt.xlabel("Temperature")
+plt.plot(temp, heat)
+plt.show()
 
-# plt.ylabel("Magnetization")
-# plt.xlabel("Temperature")
-# plt.plot(temp, arr_magn)
-# plt.show()
+plt.ylabel("Magnetization")
+plt.xlabel("Temperature")
+plt.plot(temp, arr_magn)
+plt.show()
