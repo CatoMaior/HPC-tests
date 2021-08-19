@@ -42,11 +42,6 @@ __global__ void updateBoard(char* gpuS, float* T, curandState *states) {
     int x = ((int) (generate(states, id) * 1000000)) % (N - 1);
     int y = ((int) (generate(states, id) * 1000000)) % (N - 1);
     // printf("%i\t", id);
-    // float deltaE = -2 * J * gpuS[x][y] * (gpuS[(x + 1) % N][(y + 1) % N] +
-    //                                 gpuS[(x + 1) % N][(y - 1) % N] +
-    //                                 gpuS[(x - 1) % N][(y + 1) % N] +
-    //                                 gpuS[(x - 1) % N][(y - 1) % N]) -
-    //                                 2 * H * gpuS[x][y];
     float deltaE = -2 * J * *(gpuS + N * x + y) * ( *(gpuS + ((x + 1) % N) * N + (y + 1) % N) +
                                     *(gpuS + ((x + 1) % N) * N + (y - 1) % N) +
                                     *(gpuS + ((x - 1) % N) * N + (y + 1) % N) +
