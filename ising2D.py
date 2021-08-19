@@ -1,6 +1,6 @@
 from random import randint, randrange, random
 from math import exp
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 N = 50
 J = -1
