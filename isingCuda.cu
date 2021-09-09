@@ -4,6 +4,7 @@
 #include <curand_kernel.h>
 #include <curand.h>
 #include <time.h>
+#include <cuda_profiler_api.h>
 
 #define MAX_TEMP 4
 #define NUM_STEP 100
@@ -41,12 +42,6 @@ __global__ void updateBoard(char* gpuS, float* T, curandState *states) {
     int id = threadIdx.x;
     int x = ((int) (generate(states, id) * 1000000)) % (N - 1);
     int y = ((int) (generate(states, id) * 1000000)) % (N - 1);
-    // printf("%i\t", id);
-    // float deltaE = -2 * J * gpuS[x][y] * (gpuS[(x + 1) % N][(y + 1) % N] +
-    //                                 gpuS[(x + 1) % N][(y - 1) % N] +
-    //                                 gpuS[(x - 1) % N][(y + 1) % N] +
-    //                                 gpuS[(x - 1) % N][(y - 1) % N]) -
-    //                                 2 * H * gpuS[x][y];
     float deltaE = -2 * J * *(gpuS + N * x + y) * ( *(gpuS + ((x + 1) % N) * N + (y + 1) % N) +
                                     *(gpuS + ((x + 1) % N) * N + (y - 1) % N) +
                                     *(gpuS + ((x - 1) % N) * N + (y + 1) % N) +
@@ -54,26 +49,20 @@ __global__ void updateBoard(char* gpuS, float* T, curandState *states) {
                                     2 * H * *(gpuS + N*x + y);
     __syncthreads();
     if (deltaE < 0 || exp((float) - deltaE / (Kb * *T)) > generate(states, id))
-        *(gpuS + N * x + y) *= -1;    
+        *(gpuS + N * x + y) *= -1;
 }
 
-float *runCycles(float T) {
+float *runCycles(float T, curandState* devStates) {
     float *magnArr = (float *)malloc(N_SAMPLES * sizeof(float));
     float *energyArr = (float *)malloc(N_SAMPLES * sizeof(float));
-    float magn, energy, deltaE;
-    int x, y, insertedSamples = 0;
+    float magn, energy;
+    int insertedSamples = 0;
     
     char* gpuS;
     float* Ts;
     cudaMalloc((void **) &gpuS, N * N * sizeof(char));
     cudaMalloc((void **) &Ts, sizeof(float));
     cudaMemcpy(Ts, S, sizeof(float), cudaMemcpyHostToDevice);
-    curandState* devStates;
-    cudaMalloc(&devStates, N * sizeof(curandState));
-    srand(time(0));
-    int seed = rand();
-    setup_kernel<<<1, N_THREAD>>>(devStates,seed);
-    cudaDeviceSynchronize();
 
     for (unsigned int i = 0; i < TRIGGER + N_SAMPLES; i++) {
         magn = 0;
@@ -138,18 +127,21 @@ float *runCycles(float T) {
 int main() {
     srand(time(NULL));
     randomizeS();
+    curandState* devStates;
+    cudaMalloc(&devStates, N * sizeof(curandState));
+    int seed = rand();
+    setup_kernel<<<1, N_THREAD>>>(devStates,seed);
+    cudaDeviceSynchronize();
     float *resArr;
     float susc[NUM_STEP], temp[NUM_STEP], heat[NUM_STEP], arrMagn[NUM_STEP];
     for (int i = 0; i < NUM_STEP; i++) {
         float t = MIN_TEMP + (MAX_TEMP - MIN_TEMP) / NUM_STEP * i;
-        resArr = runCycles(t);
+        resArr = runCycles(t, devStates);
         temp[i] = resArr[0];
         susc[i] = resArr[1];
         heat[i] = resArr[2];
         arrMagn[i] = resArr[3];
         free(resArr);
-    }
-    // for (int i = 0; i < NUM_STEP; i++)
-    //     printf("%f\n", temp[i] * susc[i]);
+    }    
     return 0;
 }

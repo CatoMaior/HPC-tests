@@ -1,10 +1,7 @@
-all: vanilla test cuda
+all: isingVanilla isingCuda
 
-vanilla: vanilla.c
-	gcc vanilla.c -lm -o vanilla
+isingVanilla: isingVanilla.c
+	gcc isingVanilla.c -lm -o isingVanilla
 
-cuda: cuda.cu
-	nvcc cuda.cu -o cuda
-
-test: test.cu
-	nvcc test.cu -o test
+isingCuda: isingCuda.cu
+	nvcc isingCuda.cu -o isingCuda
