@@ -12,7 +12,7 @@
 #define Kb 1
 #define TRIGGER 300000
 #define SAMPLE_DELAY 500
-#define N_SAMPLES 800
+#define N_SAMPLES 300
 
 char S[N][N];
 

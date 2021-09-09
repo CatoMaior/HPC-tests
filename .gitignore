@@ -1,2 +1,4 @@
 isingCuda
 isingVanilla
+sumVectorsVanilla
+sumVectorsCuda

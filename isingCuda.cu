@@ -4,7 +4,6 @@
 #include <curand_kernel.h>
 #include <curand.h>
 #include <time.h>
-#include <cuda_profiler_api.h>
 
 #define MAX_TEMP 4
 #define NUM_STEP 100
@@ -42,7 +41,8 @@ __global__ void updateBoard(char* gpuS, float* T, curandState *states) {
     int id = threadIdx.x;
     int x = ((int) (generate(states, id) * 1000000)) % (N - 1);
     int y = ((int) (generate(states, id) * 1000000)) % (N - 1);
-    float deltaE = -2 * J * *(gpuS + N * x + y) * ( *(gpuS + ((x + 1) % N) * N + (y + 1) % N) +
+    float deltaE = -2 * J * *(gpuS + N * x + y) *( 
+                                    *(gpuS + ((x + 1) % N) * N + (y + 1) % N) +
                                     *(gpuS + ((x + 1) % N) * N + (y - 1) % N) +
                                     *(gpuS + ((x - 1) % N) * N + (y + 1) % N) +
                                     *(gpuS + ((x - 1) % N) * N + (y - 1) % N)) -
