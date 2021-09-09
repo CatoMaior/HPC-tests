@@ -16,27 +16,27 @@ int main() {
     float *a = (float*)malloc(sizeof(float) * LEN_ARR);
     float *b = (float*)malloc(sizeof(float) * LEN_ARR);
     float *result = (float*)malloc(sizeof(float) * LEN_ARR);
-    float *d_a, *d_b, *d_result;
+    float *gpuA, *gpuB, *gpuResult;
 
     for(int i = 0; i < LEN_ARR; i++){
         a[i] = 30.0f;
         b[i] = 12.0f;
     }
 
-    cudaMalloc((void **) &d_a, sizeof(float)*LEN_ARR);
-    cudaMalloc((void **) &d_b, sizeof(float)*LEN_ARR);
-    cudaMalloc((void **) &d_result, sizeof(float)*LEN_ARR);
+    cudaMalloc((void **) &gpuA, sizeof(float) * LEN_ARR);
+    cudaMalloc((void **) &gpuB, sizeof(float) * LEN_ARR);
+    cudaMalloc((void **) &gpuResult, sizeof(float) * LEN_ARR);
 
-    cudaMemcpy(d_a, a, sizeof(float)*LEN_ARR, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, b, sizeof(float)*LEN_ARR, cudaMemcpyHostToDevice);
+    cudaMemcpy(gpuA, a, sizeof(float) * LEN_ARR, cudaMemcpyHostToDevice);
+    cudaMemcpy(gpuB, b, sizeof(float) * LEN_ARR, cudaMemcpyHostToDevice);
 
-    sumVector<<<N_BLOCKS, BLOCK_SIZE>>>(d_a, d_b, d_result, LEN_ARR);
+    sumVector<<<N_BLOCKS, BLOCK_SIZE>>>(gpuA, gpuB, gpuResult, LEN_ARR);
 
-    cudaMemcpy(result, d_result, sizeof(float) * LEN_ARR, cudaMemcpyDeviceToHost);
+    cudaMemcpy(result, gpuResult, sizeof(float) * LEN_ARR, cudaMemcpyDeviceToHost);
 
-    cudaFree(d_a);
-    cudaFree(d_b);
-    cudaFree(d_result);
+    cudaFree(gpuA);
+    cudaFree(gpuB);
+    cudaFree(gpuResult);
 
     free(a); 
     free(b); 
