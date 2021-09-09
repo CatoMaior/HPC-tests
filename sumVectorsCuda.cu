@@ -7,15 +7,15 @@
 
 __global__ void sumVector(float *a, float *b, float *result, int n) {
     int firstIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    for(int i = firstIndex; i < n; i += BLOCK_SIZE*N_BLOCKS) {
+    for(int i = firstIndex; i < n; i += BLOCK_SIZE * N_BLOCKS) {
         result[i] = a[i] + b[i];
     }
 }
 
 int main() {
-    float *a = (float*)malloc(sizeof(float)*LEN_ARR);
-    float *b = (float*)malloc(sizeof(float)*LEN_ARR);
-    float *result = (float*)malloc(sizeof(float)*LEN_ARR);
+    float *a = (float*)malloc(sizeof(float) * LEN_ARR);
+    float *b = (float*)malloc(sizeof(float) * LEN_ARR);
+    float *result = (float*)malloc(sizeof(float) * LEN_ARR);
     float *d_a, *d_b, *d_result;
 
     for(int i = 0; i < LEN_ARR; i++){
@@ -32,7 +32,7 @@ int main() {
 
     sumVector<<<N_BLOCKS, BLOCK_SIZE>>>(d_a, d_b, d_result, LEN_ARR);
 
-    cudaMemcpy(result, d_result, sizeof(float)*LEN_ARR, cudaMemcpyDeviceToHost);
+    cudaMemcpy(result, d_result, sizeof(float) * LEN_ARR, cudaMemcpyDeviceToHost);
 
     cudaFree(d_a);
     cudaFree(d_b);

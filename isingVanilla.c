@@ -99,6 +99,5 @@ int main() {
         arrMagn[i] = resArr[3];
         free(resArr);
     }
-
     return 0;
 }
