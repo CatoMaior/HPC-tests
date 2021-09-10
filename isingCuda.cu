@@ -78,7 +78,8 @@ float *runCycles(float T, curandState *devStates, char *gpuS) {
             magnArr[insertedSamples] = magn / (N * N);
             for (int j = 0; j < N; j++) {
                 for (int k = 0; k < N; k++)
-                    energy += J * S[j][k] * (S[(j + 1) % N][k] + S[j][(k + 1) % N]) - 2 * H * S[j][k];
+                    energy += J * S[j][k] * (S[(j + 1) % N][k] +
+                                  S[j][(k + 1) % N]) - 2 * H * S[j][k];
             }
             energyArr[insertedSamples] = energy;
             insertedSamples++;

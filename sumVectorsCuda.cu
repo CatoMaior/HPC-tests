@@ -1,5 +1,5 @@
 #define LEN_ARR 100000000
-#define BLOCK_SIZE 500
+#define BLOCK_SIZE 100
 #define N_BLOCKS 500
 
 #include <stdio.h>
@@ -32,7 +32,9 @@ int main() {
 
     sumVector<<<N_BLOCKS, BLOCK_SIZE>>>(gpuA, gpuB, gpuResult, LEN_ARR);
 
-    cudaMemcpy(result, gpuResult, sizeof(float) * LEN_ARR, cudaMemcpyDeviceToHost);
+    cudaMemcpy(result, gpuResult,
+        sizeof(float) * LEN_ARR, cudaMemcpyDeviceToHost
+    );
 
     cudaFree(gpuA);
     cudaFree(gpuB);
@@ -44,4 +46,3 @@ int main() {
 
     return 0;
 }
-
