@@ -1,4 +1,4 @@
-all: isingVanilla isingCuda sumVectorsVanilla sumVectorsCuda
+all: isingVanilla isingCuda sumVectorsVanilla sumVectorsCuda Relazione/relazione.pdf
 
 isingVanilla: isingVanilla.c
 	gcc isingVanilla.c -lm -o isingVanilla
@@ -11,3 +11,6 @@ sumVectorsVanilla: sumVectorsVanilla.c
 
 sumVectorsCuda: sumVectorsCuda.cu
 	nvcc sumVectorsCuda.cu -o sumVectorsCuda
+
+Relazione/relazione.pdf: Relazione/relazione.tex
+	cd Relazione && pdflatex relazione.tex

@@ -1,0 +1,352 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[pdftex]{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage[italian]{babel}
+\usepackage{fancyhdr}
+\usepackage{fancyvrb}
+\usepackage{booktabs}
+\usepackage{comment}
+\usepackage{hyperref}
+\usepackage[export]{adjustbox}
+
+\topmargin -0.5cm
+\oddsidemargin -0.5cm
+\textwidth 16.5cm
+\textheight 23.5cm
+\headheight 14pt
+
+\pagestyle{fancy}
+\lhead{Pietro Firpo, Matteo Littardi}
+\rhead{Università di Genova}
+\cfoot{\fbox{Relazione sul modulo Pervasive Computing -- Pagina \thepage\ di \pageref{NumeroPagine}}}
+
+\fancypagestyle{Titolo}{
+    \renewcommand{\headrulewidth}{0pt}
+    \fancyhf{}
+    \fancyfoot[C]{\fbox{Relazione sul modulo Pervasive Computing -- Pagina \thepage\ di \pageref{NumeroPagine}}}
+}
+
+\title{
+    \vspace{-1.6cm}
+    \begin{center}
+        \includegraphics[width=2cm]{logo_bn.png}
+    \end{center}
+    \vspace{0.6cm}
+    \textbf{Università degli Studi di Genova}\\
+    \vspace{0.2cm}
+    \textbf{Anno accademico 2020/2021}\\
+    \vspace{0.6cm}
+    \Large
+    Consorzio IANUA\\
+    \vspace{0.2cm}
+    Relazione sul modulo Pervasive Computing
+}
+\author{Pietro Firpo, Matteo Littardi}
+\date{Settembre 2021}
+
+
+\begin{document}
+\maketitle
+\thispagestyle{Titolo}
+
+
+\section{Introduzione}
+A termine del modulo \textit{Pervasive computing} proposto dal Consorzio IANUA nell'A. A. 2020/2021 abbiamo voluto esplorare le possibilità offerte dalla parallelizzazione tramite CUDA Toolkit, software sviluppato da Nvidia per le proprie schede grafiche. \\
+Tutti i test presenti nella relazione sono stati eseguiti su una scheda Nvidia GTX 1050Ti Max-Q e un processore Intel Core i7-9750H. Tutti file sorgente utilizzati per ottenere i dati riportati nella relazione sono reperibili al link \href{https://github.com/CatoMaior/HPC-tests.git}{\texttt{https://github.com/CatoMaior/HPC-tests.git}}.
+
+\section{Primo esempio: somma di vettori}
+Iniziando tramite un esercizio molto semplice per provare le funzionalità del CUDA Toolkit abbiamo provato a implementare la somma tra vettori sfruttando i 768 CUDA Cores della GPU. Il programma viene parallelizzato suddividendo il compito in blocchi divisi a loro volta in threads. Abbiamo implementato la somma in modo che ogni singolo thread si occupi degli elementi che hanno indice congruo al proprio id modulo il numero di thread, utilizzando il codice seguente:
+
+\begin{Verbatim}[numbers=left, frame=single, firstnumber=8]
+__global__ void sumVector(float *a, float *b, float *result, int n) {
+    int firstIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    for(int i = firstIndex; i < n; i += BLOCK_SIZE * N_BLOCKS) {
+        result[i] = a[i] + b[i];
+    }
+}
+\end{Verbatim}
+
+Abbiamo fatto più prove variando il numero dei blocchi e la loro dimensione. Rispetto alla situazione in cui l'intera somma vettoriale è effettuata da un unico thread siamo riusciti ad ottenere uno speed-up di circa 33 volte. 
+
+
+\begin{table}[!ht]  
+  \centering
+    \begin{tabular}{c c| c }
+     Numero blocchi & Dimensione blocchi & Tempo di esecuzione \\ \midrule
+        1           & 1                  & 14.70 secondi       \\
+        1           & 100                & 0.84 secondi        \\
+        100         & 1                  & 0.75 secondi        \\
+        500         & 100                & 0.44 secondi        \\
+    \end{tabular}
+    \caption{Tempi di esecuzione delle implementazioni della somma fra vettori}
+    \label{tab:tempi_somma}
+\end{table}
+
+\section{Secondo esempio: il modello di Ising}
+Dopo aver preso confidenza con il CUDA Toolkit abbiamo provato a parallelizzare del codice scritto da noi qualche anno fa. Si tratta di un programma di simulazione con il metodo Monte Carlo del modello di Ising, usato per analizzare la transizione della materia da ferromagnetismo a paramagnetismo con il crescere della temperatura.
+Il modello considera un reticolo di particelle il cui stato evolve nel tempo, scandito dall'aumentare della temperatura, secondo relazioni stocastiche che coinvolgono le particelle vicine. L'energia del sistema considerato viene calcolata tramite i valori delle forze elettromagnetiche tra le particelle; queste sono determinate dallo spin di ogni singola particella, che ammette come valori solamente \texttt{-1} o \texttt{1}. Quindi, chiamando $J$ la costante di accoppiamento (nel nostro caso, $J=1$), $S_{i, j}$ lo spin della particella nella posizione $(i, j)$ e $H$ il valore del campo magnetico esterno a cui il reticolo è sottoposto (nel nostro caso $H=0$) l'energia totale del sistema è:
+\begin{equation*}
+    E = -J \hspace{-20px} \sum_{\substack{i+j<i'+j' \\ |i-i'| + |j-j'| = 1}} \hspace{-20px} S_{i, j} S_{i', j'} + H \sum_{i, j} S_{i, j}
+\end{equation*}
+Ogni thread sceglie casualmente una particella e osserva cosa succederebbe se il suo spin venisse invertito: se l'energia del sistema diminuisse, tale spin viene effettivamente invertito; altrimenti viene invertito con una probabilità che dipende dalla variazione di energia che l'inversione causerebbe. Questo procedimento viene effettuato con il seguente codice:
+
+\begin{Verbatim}[numbers=left, frame=single, firstnumber=39]
+__global__ void updateBoard(char *gpuS, float *T, curandState *states) {
+    int id = threadIdx.x;
+    int x = ((int) (generate(states, id) * 1000000)) % (N - 1);
+    int y = ((int) (generate(states, id) * 1000000)) % (N - 1);
+    float deltaE = -2 * J * *(gpuS + N * x + y) *( 
+                                    *(gpuS + ((x + 1) % N) * N + y % N) +
+                                    *(gpuS + ((x - 1) % N) * N + y % N) +
+                                    *(gpuS + (x % N) * N + (y + 1) % N) +
+                                    *(gpuS + (x % N) * N + (y - 1) % N)) -
+                                    2 * H * *(gpuS + N * x + y);
+    __syncthreads();
+    if (deltaE < 0 || exp((float) - deltaE / (Kb * *T)) > generate(states, id))
+        *(gpuS + N * x + y) *= -1;
+}
+\end{Verbatim}
+
+Questo stesso programma è stato scritto anche nei linguaggi Python e C per confrontare le prestazioni con i seguenti risultati:
+
+\begin{table}[!ht]  
+  \centering
+    \begin{tabular}{c| c }
+     Linguaggio & Tempo di esecuzione \\ \midrule
+        Python      & 177.02 secondi      \\
+        C           & 3.99 secondi        \\
+        Cuda        & 11,36 secondi       \\
+    \end{tabular}
+    \caption{Tempi di esecuzione delle implementazioni del modello di Ising}
+    \label{tab:tempi_ising}
+\end{table}
+
+
+
+\section{Conclusioni}
+Nel caso della somma vettoriale, vista la semplicità del compito da svolgere, abbiamo potuto sperimentare modificando il numero e le dimensioni dei blocchi di thread, ottenendo una notevole riduzione del tempo di esecuzione. \\
+Nel caso del modello di Ising l'esecuzione su scheda video non ha permesso di scendere al di sotto del tempo di esecuzione dello stesso programma in linguaggio C, probabilmente per il tempo impiegato a trasferire i dati sulla scheda video e a sincronizzare i thread. Possiamo inoltre ipotizzare che questo sia dovuto al fatto che, per natura del modello simulato, è impossibile utilizzare un elevato numero di thread in quanto aumentandone il numero cresce la probabilità che due o più particelle adiacenti vengano aggiornate simultaneamente, facendo in modo che il programma fornisca risultati significativamente diversi a quelli ottenuti dal programma non parallelizzato. Per il modello di Ising, quindi, il vantaggio proveniente dalla maggiore disponibilità di unità di calcolo non è sufficiente a controbilanciare la perdita di tempo dovuta agli spostamenti dei dati tra le memorie.\\
+Possiamo quindi giungere alla conclusione che alcuni programmi, a causa della loro struttura, non possono trarre giovamento dalla parallelizzazione su scheda video.
+
+
+
+
+\section{Programmi utilizzati}
+
+Per comodità del lettore alleghiamo qui il codice CUDA utilizzato.
+
+\subsection{Somma di vettori}
+
+\begin{Verbatim}[numbers=left, frame=single]
+#define LEN_ARR 100000000
+#define BLOCK_SIZE 100
+#define N_BLOCKS 500
+
+#include <stdio.h>
+#include <stdlib.h>
+
+__global__ void sumVector(float *a, float *b, float *result, int n) {
+    int firstIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    for(int i = firstIndex; i < n; i += BLOCK_SIZE * N_BLOCKS) {
+        result[i] = a[i] + b[i];
+    }
+}
+
+int main() {
+    float *a = (float*)malloc(sizeof(float) * LEN_ARR);
+    float *b = (float*)malloc(sizeof(float) * LEN_ARR);
+    float *result = (float*)malloc(sizeof(float) * LEN_ARR);
+    float *gpuA, *gpuB, *gpuResult;
+
+    for(int i = 0; i < LEN_ARR; i++){
+        a[i] = 30.0f;
+        b[i] = 12.0f;
+    }
+
+    cudaMalloc((void **) &gpuA, sizeof(float) * LEN_ARR);
+    cudaMalloc((void **) &gpuB, sizeof(float) * LEN_ARR);
+    cudaMalloc((void **) &gpuResult, sizeof(float) * LEN_ARR);
+
+    cudaMemcpy(gpuA, a, sizeof(float) * LEN_ARR, cudaMemcpyHostToDevice);
+    cudaMemcpy(gpuB, b, sizeof(float) * LEN_ARR, cudaMemcpyHostToDevice);
+
+    sumVector<<<N_BLOCKS, BLOCK_SIZE>>>(gpuA, gpuB, gpuResult, LEN_ARR);
+
+    cudaMemcpy(result, gpuResult,
+        sizeof(float) * LEN_ARR, cudaMemcpyDeviceToHost
+    );
+
+    cudaFree(gpuA);
+    cudaFree(gpuB);
+    cudaFree(gpuResult);
+
+    free(a); 
+    free(b); 
+    free(result);
+
+    return 0;
+}
+\end{Verbatim}
+
+
+
+\subsection{Modello di Ising}
+
+\begin{Verbatim}[numbers=left, frame=single]
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <curand_kernel.h>
+#include <curand.h>
+#include <time.h>
+
+#define MAX_TEMP 4
+#define NUM_STEP 100
+#define MIN_TEMP 0.01
+#define N 50
+#define J -1
+#define H 0
+#define Kb 1
+#define TRIGGER 1000
+#define SAMPLE_DELAY 10
+#define N_SAMPLES 800
+#define N_THREAD 40
+
+char S[N][N];
+
+void randomizeS() {
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < N; j++)
+            S[i][j] = rand() > RAND_MAX / 2 ? 1 : -1;
+}
+
+__device__ float generate(curandState *globalState, int ind) {
+    curandState localState = globalState[ind];
+    float randNum = curand_uniform(&localState);
+    globalState[ind] = localState;
+    return randNum;
+}
+
+__global__ void setup_kernel(curandState *state, unsigned long seed) {
+    int id = threadIdx.x;
+    curand_init(seed, id, 0, &state[id]);
+}
+
+__global__ void updateBoard(char *gpuS, float *T, curandState *states) {
+    int id = threadIdx.x;
+    int x = ((int) (generate(states, id) * 1000000)) % (N - 1);
+    int y = ((int) (generate(states, id) * 1000000)) % (N - 1);
+    float deltaE = -2 * J * *(gpuS + N * x + y) *( 
+                                    *(gpuS + ((x + 1) % N) * N + (y + 1) % N) +
+                                    *(gpuS + ((x + 1) % N) * N + (y - 1) % N) +
+                                    *(gpuS + ((x - 1) % N) * N + (y + 1) % N) +
+                                    *(gpuS + ((x - 1) % N) * N + (y - 1) % N)) -
+                                    2 * H * *(gpuS + N * x + y);
+    __syncthreads();
+    if (deltaE < 0 || exp((float) - deltaE / (Kb * *T)) > generate(states, id))
+        *(gpuS + N * x + y) *= -1;
+}
+
+float *runCycles(float T, curandState *devStates, char *gpuS) {
+    float *magnArr = (float *)malloc(N_SAMPLES * sizeof(float));
+    float *energyArr = (float *)malloc(N_SAMPLES * sizeof(float));
+    float magn, energy;
+    int insertedSamples = 0;
+
+    float* Ts;
+    cudaMalloc((void **) &Ts, sizeof(float));
+    cudaMemcpy(Ts, S, sizeof(float), cudaMemcpyHostToDevice);
+
+    for (unsigned int i = 0; i < TRIGGER + N_SAMPLES; i++) {
+        magn = 0;
+        energy = 0;
+        for (unsigned int j = 0; j < SAMPLE_DELAY; j++) {
+            updateBoard<<<1, N_THREAD>>>(gpuS, Ts, devStates);
+            cudaDeviceSynchronize();
+        }
+        cudaMemcpy(S, gpuS, N * N, cudaMemcpyDeviceToHost);
+        if (i > TRIGGER) {
+            for (int j = 0; j < N; j++) {
+                for (int k = 0; k < N; k++)
+                    magn += S[j][k];
+            }
+            magnArr[insertedSamples] = magn / (N * N);
+            for (int j = 0; j < N; j++) {
+                for (int k = 0; k < N; k++)
+                    energy += J * S[j][k] * (S[(j + 1) % N][k] +
+                                  S[j][(k + 1) % N]) - 2 * H * S[j][k];
+            }
+            energyArr[insertedSamples] = energy;
+            insertedSamples++;
+        }
+    }
+
+    cudaFree(Ts);
+
+    float susc = 0, sq_av = 0, av_sq = 0, cal = 0;
+    magn = 0;
+
+    for (int i = 0; i < N_SAMPLES; i++) {
+        sq_av += magnArr[i];
+        av_sq += sq_av * sq_av;
+    }
+    sq_av /= N_SAMPLES;
+    av_sq /= N_SAMPLES;
+
+    magn = abs(sq_av);
+    sq_av = sq_av * sq_av;
+    susc = (av_sq - sq_av) / T;
+    sq_av = 0;
+    av_sq = 0;
+
+    for (int i = 0; i < N_SAMPLES; i++) {
+        sq_av += energyArr[i];
+        av_sq += sq_av * sq_av;
+    }
+    sq_av /= N_SAMPLES;
+    av_sq /= N_SAMPLES;
+    sq_av = sq_av * sq_av;
+    cal = (av_sq - sq_av) / T;
+
+    free(magnArr);
+    free(energyArr);
+
+    float *retArr = (float *)malloc(4 * sizeof(float));
+    retArr[0] = T;
+    retArr[1] = susc;
+    retArr[2] = cal;
+    retArr[3] = magn;
+    return retArr;
+}
+
+int main() {
+    srand(time(NULL));
+    randomizeS();
+    char* gpuS;
+    cudaMalloc((void **) &gpuS, N * N * sizeof(char));
+    cudaMemcpy(gpuS, S, N * N, cudaMemcpyHostToDevice);
+    curandState* devStates;
+    cudaMalloc(&devStates, N * sizeof(curandState));
+    int seed = rand();
+    setup_kernel<<<1, N_THREAD>>>(devStates, seed);
+    cudaDeviceSynchronize();
+    float *resArr;
+    float susc[NUM_STEP], temp[NUM_STEP], heat[NUM_STEP], arrMagn[NUM_STEP];
+    for (int i = 0; i < NUM_STEP; i++) {
+        float t = MIN_TEMP + (MAX_TEMP - MIN_TEMP) / NUM_STEP * i;
+        resArr = runCycles(t, devStates, gpuS);
+        temp[i] = resArr[0];
+        susc[i] = resArr[1];
+        heat[i] = resArr[2];
+        arrMagn[i] = resArr[3];
+        free(resArr);
+    }
+    cudaFree(gpuS);
+    return 0;
+}
+
+\end{Verbatim}
+
+\label{NumeroPagine}
+\end{document}
