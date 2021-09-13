@@ -65,8 +65,7 @@ __global__ void sumVector(float *a, float *b, float *result, int n) {
 }
 \end{Verbatim}
 
-Abbiamo fatto più prove variando il numero dei blocchi e la loro dimensione. Rispetto alla situazione in cui l'intera somma vettoriale è effettuata da un unico thread siamo riusciti ad ottenere uno speed-up di circa 33 volte. 
-
+Abbiamo fatto più prove variando il numero dei blocchi e la loro dimensione. Rispetto alla situazione in cui l'intera somma vettoriale è effettuata da un unico thread siamo riusciti ad ottenere uno speed-up di circa 33 volte:
 
 \begin{table}[!ht]  
   \centering
@@ -120,18 +119,12 @@ Questo stesso programma è stato scritto anche nei linguaggi Python e C per conf
     \label{tab:tempi_ising}
 \end{table}
 
-
-
 \section{Conclusioni}
 Nel caso della somma vettoriale, vista la semplicità del compito da svolgere, abbiamo potuto sperimentare modificando il numero e le dimensioni dei blocchi di thread, ottenendo una notevole riduzione del tempo di esecuzione. \\
 Nel caso del modello di Ising l'esecuzione su scheda video non ha permesso di scendere al di sotto del tempo di esecuzione dello stesso programma in linguaggio C, probabilmente per il tempo impiegato a trasferire i dati sulla scheda video e a sincronizzare i thread. Possiamo inoltre ipotizzare che questo sia dovuto al fatto che, per natura del modello simulato, è impossibile utilizzare un elevato numero di thread in quanto aumentandone il numero cresce la probabilità che due o più particelle adiacenti vengano aggiornate simultaneamente, facendo in modo che il programma fornisca risultati significativamente diversi a quelli ottenuti dal programma non parallelizzato. Per il modello di Ising, quindi, il vantaggio proveniente dalla maggiore disponibilità di unità di calcolo non è sufficiente a controbilanciare la perdita di tempo dovuta agli spostamenti dei dati tra le memorie.\\
-Possiamo quindi giungere alla conclusione che alcuni programmi, a causa della loro struttura, non possono trarre giovamento dalla parallelizzazione su scheda video.
-
-
-
+Abbiamo quindi potuto sperimentare come alcuni programmi, a causa della loro struttura, non possano trarre giovamento dalla parallelizzazione su scheda video.
 
 \section{Programmi utilizzati}
-
 Per comodità del lettore alleghiamo qui il codice CUDA utilizzato.
 
 \subsection{Somma di vettori}
@@ -186,8 +179,6 @@ int main() {
     return 0;
 }
 \end{Verbatim}
-
-
 
 \subsection{Modello di Ising}
 
