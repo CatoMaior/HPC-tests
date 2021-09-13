@@ -45,11 +45,9 @@
 \author{Pietro Firpo, Matteo Littardi}
 \date{Settembre 2021}
 
-
 \begin{document}
 \maketitle
 \thispagestyle{Titolo}
-
 
 \section{Introduzione}
 A termine del modulo \textit{Pervasive computing} proposto dal Consorzio IANUA nell'A. A. 2020/2021 abbiamo voluto esplorare le possibilità offerte dalla parallelizzazione tramite CUDA Toolkit, software sviluppato da Nvidia per le proprie schede grafiche. \\
@@ -61,7 +59,7 @@ Iniziando tramite un esercizio molto semplice per provare le funzionalità del C
 \begin{Verbatim}[numbers=left, frame=single, firstnumber=8]
 __global__ void sumVector(float *a, float *b, float *result, int n) {
     int firstIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    for(int i = firstIndex; i < n; i += BLOCK_SIZE * N_BLOCKS) {
+    for (int i = firstIndex; i < n; i += BLOCK_SIZE * N_BLOCKS) {
         result[i] = a[i] + b[i];
     }
 }
